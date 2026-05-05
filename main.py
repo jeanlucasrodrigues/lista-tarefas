@@ -9,7 +9,8 @@ cursor = conexao.cursor()
 cursor.execute("""
     CREATE TABLE IF NOT EXISTS tarefas (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nome TEXT NOT NULL
+        nome TEXT NOT NULL,
+        concluida INTEGER DEFAULT 0
     )
 """)
 conexao.commit()
@@ -36,8 +37,23 @@ def carregar_tarefas_do_banco():
 
     # Na parte de cima ele repopula a tabela com os dados do banco
     # Aqui na parte de baixo, para cada dado, ele vai criar uma checkbox e adicionar na tabela
-    for linha in dados:       
-        nova_tarefa = customtkinter.CTkCheckBox(master=frame_lista, text=linha[1])
+    for linha in dados:
+        # linha[1] é o nome, linha[2] é o status 'concluida'
+        texto_tarefa = linha[1]
+        status_concluido = linha[2]
+        if status_concluido == 1:
+            nova_tarefa = customtkinter.CTkCheckBox(
+                master=frame_lista, 
+                text=texto_tarefa, 
+                font=("Roboto", 16, "overstrike"), 
+                text_color="gray"
+            )
+        else:
+            nova_tarefa = customtkinter.CTkCheckBox(
+                master=frame_lista, 
+                text=texto_tarefa
+            )
+            
         nova_tarefa.pack(pady=5, anchor="w", padx=10)
         lista_de_tarefas.append(nova_tarefa)
 
@@ -119,11 +135,15 @@ def alterar_tarefa():
             entrada.delete(0, "end")
             break
 
-def deleta_tudo():
+def coloca_concluido():
     for check in lista_de_tarefas:
-        check.destroy()
-    lista_de_tarefas.clear() 
-#Remover ou atribuir uma nova função a esse botão
+        if check.get() == 1:
+            nome_tarefa = check.cget("text") #Aqui ele percorre todos os checks e só pega o texto do marcado
+            check.configure(font=(("Roboto", 14, "overstrike"))) 
+    #colocando sublinhado em tarefas concluidas
+            cursor.execute("UPDATE tarefas SET concluida = 1 where nome = ?",(nome_tarefa,))
+            conexao.commit()
+            check.deselect()
 
 app.grid_columnconfigure(1, weight=1) # O Weight1 é para ele ocupar o espaço da janela
 app.grid_rowconfigure(0, weight=1) 
@@ -157,8 +177,8 @@ label_titulo.pack(pady=20, anchor="w")
 entrada = customtkinter.CTkEntry(frame_direita, placeholder_text='Insira a tarefa', width=300)
 entrada.pack(pady=10, anchor="w")
 
-# Botão legado, remover
-botao_extra = customtkinter.CTkButton(frame_direita, text="Apagar tudo", command=lambda: aviso_are_you_sure(deleta_tudo))
+# Botão Marcar concluido
+botao_extra = customtkinter.CTkButton(frame_direita, text="Marcar concluido", command=coloca_concluido)
 botao_extra.pack(pady=10, anchor="w")
 
 #lista de tarefas
